@@ -24,6 +24,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	http.Handle("/", asset)
 	http.Handle("/x", asset)
 	http.ListenAndServe(listen, nil)

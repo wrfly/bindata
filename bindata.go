@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"sort"
 	"time"
 )
 
@@ -48,6 +50,12 @@ func (d *data) Asset(name string) (Asset, error) {
 
 func (d *data) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if f, found := d.files[r.RequestURI]; found {
+
+		if f.isDir {
+			dirList(w, r, &fileReader{f, 0})
+			return
+		}
+
 		w.Write(f.b)
 		w.Header().Set("Content-Length", fmt.Sprint(f.size))
 		w.Header().Set("Content-Type", f.cType)
@@ -103,6 +111,7 @@ type file struct {
 	files  []*file
 	assets []Asset
 	dirP   string // dir path
+	rlvP   string // relevance path
 }
 
 func (f *file) Readdir(count int) ([]os.FileInfo, error) {
@@ -110,7 +119,7 @@ func (f *file) Readdir(count int) ([]os.FileInfo, error) {
 		return nil, errors.New("not dir")
 	}
 	if count < 0 {
-		return nil, nil
+		return f.dir, nil
 	}
 	if count >= len(f.dir) {
 		count = len(f.dir) - 1
@@ -167,4 +176,30 @@ func (f *fileInfo) IsDir() bool {
 // underlying data source (can return nil)
 func (f *fileInfo) Sys() interface{} {
 	return nil
+}
+
+// dirList copied from http.FileSystem
+func dirList(w http.ResponseWriter, r *http.Request, f http.File) {
+	dirs, err := f.Readdir(-1)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Error reading directory")
+		return
+	}
+	sort.Slice(dirs, func(i, j int) bool { return dirs[i].Name() < dirs[j].Name() })
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, "<pre>\n")
+	for _, d := range dirs {
+		name := d.Name()
+		if d.IsDir() {
+			name += "/"
+		}
+		// name may contain '?' or '#', which must be escaped to remain
+		// part of the URL path, and not indicate the start of a query
+		// string or fragment.
+		url := url.URL{Path: name}
+		fmt.Fprintf(w, "<a href=\"%s\">%s</a>\n", url.String(), d.Name())
+	}
+	fmt.Fprintf(w, "</pre>\n")
 }

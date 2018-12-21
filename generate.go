@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const maxWalkDepth = 10
@@ -33,6 +34,7 @@ func walk(root string, depth int) ([]*file, error) {
 				},
 				p:    path,
 				dirP: filepath.Dir(path),
+				rlvP: strings.TrimPrefix(path, root),
 			}
 
 			if !info.IsDir() {
@@ -48,11 +50,15 @@ func walk(root string, depth int) ([]*file, error) {
 	}
 
 	for _, f := range fs {
-		if f.isDir {
-			for _, ff := range fs {
-				if !ff.isDir && ff.dirP == f.p {
-					f.files = append(f.files, ff)
-				}
+		if !f.isDir {
+			continue
+		}
+		// fill the dir
+		for _, ff := range fs {
+			if !ff.isDir && ff.dirP == f.p {
+				f.dir = append(f.dir, ff.fileInfo)
+				f.files = append(f.files, ff)
+				f.assets = append(f.assets, ff)
 			}
 		}
 	}
@@ -65,32 +71,19 @@ func Gen(dir string) (Assets, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, f := range fs {
-		if f.isDir {
-			fmt.Println("->", f.p)
-			for _, ff := range f.files {
-				fmt.Println(f.p, ":", ff.name)
-			}
-		}
-	}
 
 	d := &data{
-		prefix: "/",
-		files:  make(map[string]*file, 0),
+		prefix: "/x",
+		files:  make(map[string]*file, len(fs)),
 	}
-	d.files["/"] = &file{
-		fileInfo: &fileInfo{
-			name: "/",
-			size: 4,
-		},
-		b: []byte("1234"),
-	}
-	d.files["/x"] = &file{
-		fileInfo: &fileInfo{
-			name: "",
-			size: 3,
-		},
-		b: []byte("123"),
+	for _, f := range fs {
+		name := filepath.Join(d.prefix, f.rlvP)
+		if f.IsDir() {
+			if name != "/" {
+				d.files[name+"/"] = f
+			}
+		}
+		d.files[name] = f
 	}
 	return d, nil
 }
