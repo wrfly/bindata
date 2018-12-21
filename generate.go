@@ -49,13 +49,14 @@ func walk(root string, depth int) ([]*file, error) {
 		return fs, err
 	}
 
+	xs := fs
 	for _, f := range fs {
 		if !f.isDir {
 			continue
 		}
 		// fill the dir
-		for _, ff := range fs {
-			if !ff.isDir && ff.dirP == f.p {
+		for _, ff := range xs {
+			if ff.dirP == f.p {
 				f.dir = append(f.dir, ff.fileInfo)
 				f.files = append(f.files, ff)
 				f.assets = append(f.assets, ff)
@@ -67,6 +68,14 @@ func walk(root string, depth int) ([]*file, error) {
 }
 
 func Gen(dir string) (Assets, error) {
+	if !filepath.IsAbs(dir) {
+		pwd, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		dir = filepath.Join(pwd, dir)
+	}
+
 	fs, err := walk(dir, 0)
 	if err != nil {
 		return nil, err
@@ -76,14 +85,19 @@ func Gen(dir string) (Assets, error) {
 		prefix: "/x",
 		files:  make(map[string]*file, len(fs)),
 	}
+	all := &file{fileInfo: &fileInfo{isDir: true}}
 	for _, f := range fs {
 		name := filepath.Join(d.prefix, f.rlvP)
-		if f.IsDir() {
-			if name != "/" {
-				d.files[name+"/"] = f
-			}
+		if f.IsDir() && name != "/" {
+			d.files[name+"/"] = f
 		}
 		d.files[name] = f
+
+		all.files = append(all.files, f)
+		all.dir = append(all.dir, f.fileInfo)
+		all.assets = append(all.assets, f)
 	}
+	d.all = all
+
 	return d, nil
 }

@@ -25,6 +25,18 @@ func main() {
 		panic(err)
 	}
 
+	for _, x := range asset.List() {
+		f, err := x.File()
+		if err != nil {
+			panic(err)
+		}
+		info, err := f.Stat()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(info.Name(), info.IsDir())
+	}
+
 	http.Handle("/", asset)
 	http.Handle("/x", asset)
 	http.ListenAndServe(listen, nil)

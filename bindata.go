@@ -12,6 +12,7 @@ import (
 )
 
 type Assets interface {
+	List() []Asset // return all files
 	Asset(name string) (Asset, error)
 	Open(name string) (http.File, error)              // implement http.FileSystem
 	ServeHTTP(w http.ResponseWriter, r *http.Request) // implement http.FileServer
@@ -20,7 +21,7 @@ type Assets interface {
 type Asset interface {
 	List() ([]Asset, error)
 	Readdir(count int) ([]os.FileInfo, error)
-	Stat() (os.FileInfo, error)
+	File() (http.File, error)
 }
 
 var (
@@ -32,6 +33,7 @@ var (
 type data struct {
 	prefix string
 	files  map[string]*file
+	all    *file
 }
 
 func (d *data) Open(name string) (http.File, error) {
@@ -46,6 +48,10 @@ func (d *data) Asset(name string) (Asset, error) {
 		return f, nil
 	}
 	return nil, os.ErrNotExist
+}
+
+func (d *data) List() []Asset {
+	return d.all.assets
 }
 
 func (d *data) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -129,6 +135,10 @@ func (f *file) Readdir(count int) ([]os.FileInfo, error) {
 
 func (f *file) Stat() (os.FileInfo, error) {
 	return f, nil
+}
+
+func (f *file) File() (http.File, error) {
+	return &fileReader{f, 0}, nil
 }
 
 func (f *file) List() ([]Asset, error) {
