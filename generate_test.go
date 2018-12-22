@@ -1,10 +1,16 @@
 package bindata
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestGenerate(t *testing.T) {
-	path := "resource"
-	fs, err := Gen(path)
+	fs, err := Gen(GenOption{
+		Package:  "main",
+		Resource: "resource",
+		Prefix:   "/html",
+		Target:   "example",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,4 +28,5 @@ func TestGenerate(t *testing.T) {
 		}
 		t.Logf("got file: %s", stat.Name())
 	}
+
 }

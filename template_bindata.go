@@ -1,5 +1,7 @@
 package bindata
 
+var bindataTemplate = `package %s
+
 import (
 	"errors"
 	"fmt"
@@ -222,7 +224,8 @@ func dirList(w http.ResponseWriter, r *http.Request, f http.File) {
 		// part of the URL path, and not indicate the start of a query
 		// string or fragment.
 		url := url.URL{Path: name}
-		fmt.Fprintf(w, "<a href=\"%s\">%s</a>\n", url.String(), d.Name())
+		fmt.Fprintf(w, "<a href=\"%%s\">%%s</a>\n", url.String(), d.Name())
 	}
 	fmt.Fprintf(w, "</pre>\n")
 }
+`

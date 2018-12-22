@@ -1,29 +1,30 @@
 package bindata
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-const maxWalkDepth = 10
+type GenOption struct {
+	Package  string // package name
+	Prefix   string // file prefix
+	Target   string // where to put the generated file
+	Resource string // a single file or a dir
+}
 
-var (
-	errMaxDepthExceeded = errors.New("max depth is 10")
-)
-
-var pf = fmt.Printf
-
-func walk(root string, depth int) ([]*file, error) {
-	if depth > maxWalkDepth {
-		return nil, errMaxDepthExceeded
-	}
-	fs := []*file{}
+func walk(root string) (fs []*file, err error) {
+	id := 0
 	if err := filepath.Walk(root,
 		func(path string, info os.FileInfo, err error) error {
+			if info == nil {
+				return fmt.Errorf("get file [%s] error, info is nil", path)
+			}
+			xPath := filepath.Join("/", strings.TrimPrefix(path, root))
 			got := &file{
 				fileInfo: &fileInfo{
 					name:  info.Name(),
@@ -32,9 +33,14 @@ func walk(root string, depth int) ([]*file, error) {
 					mode:  info.Mode(),
 					mTime: info.ModTime(),
 				},
-				p:    path,
-				dirP: filepath.Dir(path),
-				rlvP: strings.TrimPrefix(path, root),
+				path: xPath,
+				dirP: filepath.Dir(xPath),
+				id:   id,
+			}
+			id++
+
+			if xPath == "/" {
+				got.name = "/"
 			}
 
 			if !info.IsDir() {
@@ -48,7 +54,12 @@ func walk(root string, depth int) ([]*file, error) {
 		}); err != nil {
 		return fs, err
 	}
+	fill(fs)
 
+	return fs, nil
+}
+
+func fill(fs []*file) {
 	xs := fs
 	for _, f := range fs {
 		if !f.isDir {
@@ -56,48 +67,170 @@ func walk(root string, depth int) ([]*file, error) {
 		}
 		// fill the dir
 		for _, ff := range xs {
-			if ff.dirP == f.p {
-				f.dir = append(f.dir, ff.fileInfo)
+			if ff.dirP == f.path {
+				f.infos = append(f.infos, ff.fileInfo)
 				f.files = append(f.files, ff)
 				f.assets = append(f.assets, ff)
 			}
 		}
 	}
-
-	return fs, nil
 }
 
-func Gen(dir string) (Assets, error) {
-	if !filepath.IsAbs(dir) {
-		pwd, err := os.Getwd()
+func Gen(opts GenOption) (Assets, error) {
+	// validate options
+	if opts.Package == "" {
+		opts.Package = "asset"
+	}
+	if opts.Prefix == "" {
+		opts.Prefix = "/"
+	}
+	if opts.Target == "" {
+		wd, err := os.Getwd()
 		if err != nil {
 			return nil, err
 		}
-		dir = filepath.Join(pwd, dir)
+		opts.Target = filepath.Join(wd, "asset")
 	}
 
-	fs, err := walk(dir, 0)
+	// make data
+	d, err := buildData(opts.Resource, opts.Prefix)
 	if err != nil {
 		return nil, err
 	}
 
-	d := &data{
-		prefix: "/x",
-		files:  make(map[string]*file, len(fs)),
+	// make writerTo
+	w, err := buildWriter(d, opts.Prefix, opts.Package)
+	if err != nil {
+		return nil, err
 	}
+
+	info, err := os.Stat(opts.Target)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if err := os.Mkdir(opts.Target, 0755); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else if !info.IsDir() {
+		return nil, fmt.Errorf("target is not a directory")
+	}
+
+	targetPkg := filepath.Join(opts.Target, "asset.go")
+	f, err := os.Create(targetPkg)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	_, err = w.WriteTo(f)
+	if err != nil {
+		return nil, err
+	}
+
+	targetBin := filepath.Join(opts.Target, "bindata.go")
+	fBindata, err := os.Create(targetBin)
+	if err != nil {
+		return nil, err
+	}
+	defer fBindata.Close()
+	_, err = fmt.Fprintf(fBindata, bindataTemplate, opts.Package)
+
+	return d, err
+}
+
+func buildData(resource, prefix string) (*data, error) {
+	if !filepath.IsAbs(resource) {
+		pwd, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		resource = filepath.Join(pwd, resource)
+	}
+
+	fs, err := walk(resource)
+	if err != nil {
+		return nil, err
+	}
+
 	all := &file{fileInfo: &fileInfo{isDir: true}}
 	for _, f := range fs {
-		name := filepath.Join(d.prefix, f.rlvP)
-		if f.IsDir() && name != "/" {
-			d.files[name+"/"] = f
+		if f.path == "/" {
+			f.sPath = filepath.Join(prefix, f.dirP)
+		} else {
+			f.sPath = filepath.Join(prefix, f.dirP, f.name)
 		}
-		d.files[name] = f
-
 		all.files = append(all.files, f)
-		all.dir = append(all.dir, f.fileInfo)
+		all.infos = append(all.infos, f.fileInfo)
 		all.assets = append(all.assets, f)
 	}
-	d.all = all
 
-	return d, nil
+	return &data{
+		prefix: prefix,
+		files:  make(map[string]*file, len(fs)),
+		all:    all,
+	}, nil
+}
+
+func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
+	w := bytes.NewBuffer(nil)
+
+	// package header
+	filesStr := ""
+	for _, f := range d.all.files {
+		filesStr = fmt.Sprintf("%s\n\t%s", filesStr, f.path)
+	}
+	fmt.Fprintf(w, headerTemplate, filesStr, pName)
+
+	// files
+	for _, f := range d.all.files {
+		printFile(w, f.sPath, f)
+	}
+
+	// package footer
+	names := []string{}
+	for _, f := range d.all.files {
+		names = append(names, f.keyFileName())
+	}
+	fs := ""
+	for i, n := range names {
+		if i%5 == 0 {
+			fs += "\n\t"
+		} else {
+			fs += " "
+		}
+		fs += n + ","
+	}
+	fmt.Fprintf(w, footerTemplate, fs, prefix)
+
+	return w, nil
+}
+
+func printFile(w io.Writer, name string, f *file) error {
+	// print bytes
+	bs := ""
+	for i, b := range f.b {
+		if i%15 == 0 && len(f.b) > 15 {
+			bs += "\" +\n\t\""
+		}
+		bs += fmt.Sprintf("\\x%02x", b)
+	}
+	fmt.Fprintf(w, fileBytesTemplate, f.keyBytesName(), bs)
+
+	// print file
+	fmt.Fprintf(w, fileTemplate,
+		f.keyFileName(),
+		f.name,
+		f.isDir,
+		f.size,
+		f.mode,
+		f.mTime.Unix(),
+		f.path,
+		f.dirP,
+		f.sPath,
+		f.id,
+		f.keyBytesName(),
+	)
+
+	return nil
 }

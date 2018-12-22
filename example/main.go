@@ -4,8 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-
-	"github.com/wrfly/bindata"
 )
 
 var (
@@ -19,25 +17,7 @@ func init() {
 }
 
 func main() {
-	dir := "/home/mr/Documents/workspace/golang/src/github.com/wrfly/bindata/resource"
-	asset, err := bindata.Gen(dir)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, x := range asset.List() {
-		f, err := x.File()
-		if err != nil {
-			panic(err)
-		}
-		info, err := f.Stat()
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(info.Name(), info.IsDir())
-	}
-
-	http.Handle("/", asset)
-	http.Handle("/x", asset)
+	http.Handle("/", Data)
+	http.Handle("/html", Data)
 	http.ListenAndServe(listen, nil)
 }
