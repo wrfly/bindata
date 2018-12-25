@@ -1,4 +1,4 @@
-package main
+package asset
 
 import (
 	"errors"
@@ -150,15 +150,15 @@ func (f *file) List() ([]Asset, error) {
 }
 
 func (f *file) keyFileName() string {
-	return fmt.Sprintf("_file_%!d(MISSING)", f.id)
+	return fmt.Sprintf("_file_%d", f.id)
 }
 
 func (f *file) keyBytesName() string {
-	return fmt.Sprintf("_bytes_%!d(MISSING)", f.id)
+	return fmt.Sprintf("_bytes_%d", f.id)
 }
 
 func (f *file) keyMTime() string {
-	return fmt.Sprintf("_mTime_%!d(MISSING)", f.id)
+	return fmt.Sprintf("_mTime_%d", f.id)
 }
 
 type fileInfo struct {

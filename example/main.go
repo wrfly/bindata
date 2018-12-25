@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+
+	"github.com/wrfly/bindata/example/asset"
 )
 
 var (
@@ -17,7 +19,7 @@ func init() {
 }
 
 func main() {
-	http.Handle("/", Data)
-	http.Handle("/html", Data)
+	http.Handle("/", asset.Data)
+	http.Handle("/html", asset.Data)
 	http.ListenAndServe(listen, nil)
 }

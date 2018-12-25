@@ -18,7 +18,7 @@ Files:
 DO NOT EDIT!
 */
 
-package main
+package asset
 
 import (
 	"os"
@@ -37,7 +37,7 @@ var _file_0 = &file{
 	},
 	path:  "/",
 	dirP:  "/",
-	sPath: "/html",
+	sPath: "/",
 	id:    0,
 	b:     _bytes_0,
 }
@@ -72,7 +72,7 @@ var _file_1 = &file{
 	},
 	path:  "/index.html",
 	dirP:  "/",
-	sPath: "/html/index.html",
+	sPath: "/index.html",
 	id:    1,
 	b:     _bytes_1,
 }
@@ -89,7 +89,7 @@ var _file_2 = &file{
 	},
 	path:  "/main.css",
 	dirP:  "/",
-	sPath: "/html/main.css",
+	sPath: "/main.css",
 	id:    2,
 	b:     _bytes_2,
 }
@@ -106,7 +106,7 @@ var _file_3 = &file{
 	},
 	path:  "/main.js",
 	dirP:  "/",
-	sPath: "/html/main.js",
+	sPath: "/main.js",
 	id:    3,
 	b:     _bytes_3,
 }
@@ -123,7 +123,7 @@ var _file_4 = &file{
 	},
 	path:  "/sub",
 	dirP:  "/",
-	sPath: "/html/sub",
+	sPath: "/sub",
 	id:    4,
 	b:     _bytes_4,
 }
@@ -158,7 +158,7 @@ var _file_5 = &file{
 	},
 	path:  "/sub/sub_index.html",
 	dirP:  "/sub",
-	sPath: "/html/sub/sub_index.html",
+	sPath: "/sub/sub_index.html",
 	id:    5,
 	b:     _bytes_5,
 }
@@ -175,7 +175,7 @@ var _file_6 = &file{
 	},
 	path:  "/sub/sub_main.css",
 	dirP:  "/sub",
-	sPath: "/html/sub/sub_main.css",
+	sPath: "/sub/sub_main.css",
 	id:    6,
 	b:     _bytes_6,
 }
@@ -192,7 +192,7 @@ var _file_7 = &file{
 	},
 	path:  "/sub/sub_main.js",
 	dirP:  "/sub",
-	sPath: "/html/sub/sub_main.js",
+	sPath: "/sub/sub_main.js",
 	id:    7,
 	b:     _bytes_7,
 }
@@ -267,7 +267,7 @@ var _file_8 = &file{
 	},
 	path:  "/sub/sub_x.png",
 	dirP:  "/sub",
-	sPath: "/html/sub/sub_x.png",
+	sPath: "/sub/sub_x.png",
 	id:    8,
 	b:     _bytes_8,
 }
@@ -284,7 +284,7 @@ var _file_9 = &file{
 	},
 	path:  "/sub/subsub",
 	dirP:  "/sub",
-	sPath: "/html/sub/subsub",
+	sPath: "/sub/subsub",
 	id:    9,
 	b:     _bytes_9,
 }
@@ -301,7 +301,7 @@ var _file_10 = &file{
 	},
 	path:  "/sub/subsub/hi.txt",
 	dirP:  "/sub/subsub",
-	sPath: "/html/sub/subsub/hi.txt",
+	sPath: "/sub/subsub/hi.txt",
 	id:    10,
 	b:     _bytes_10,
 }
@@ -376,7 +376,7 @@ var _file_11 = &file{
 	},
 	path:  "/x.png",
 	dirP:  "/",
-	sPath: "/html/x.png",
+	sPath: "/x.png",
 	id:    11,
 	b:     _bytes_11,
 }
@@ -390,7 +390,7 @@ var fs = []*file{
 var Data Assets
 
 var d = &data{
-	prefix: "/html",
+	prefix: "/",
 	files:  make(map[string]*file, len(fs)),
 }
 
@@ -419,6 +419,6 @@ func init() {
 		all.assets = append(all.assets, f)
 	}
 	d.all = all
-	
+
 	Data = d
 }
