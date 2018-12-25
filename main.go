@@ -3,6 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	bindata "github.com/wrfly/bindata/lib"
 )
@@ -12,12 +15,14 @@ var (
 )
 
 func init() {
-	flag.StringVar(&packageName, "package", "asset", "target package name")
 	flag.StringVar(&resource, "resource", "", "resource dir")
-	flag.StringVar(&prefix, "prefix", "/",
-		"resource prefix, used for http server")
-	flag.StringVar(&target, "target", "example/asset",
-		"where to put the generated files")
+	flag.StringVar(&packageName, "pkg",
+		"github.com/wrfly/bindata/example/asset", "target package name")
+	flag.StringVar(&prefix, "prefix",
+		"/", "resource prefix, used for http server")
+	flag.StringVar(&target, "target",
+		"", "where to put the generated files, default is the package's path")
+
 	flag.Parse()
 }
 
@@ -27,8 +32,20 @@ func main() {
 		return
 	}
 
+	var pkg string
+	if strings.Contains(packageName, "/") {
+		x := strings.Split(packageName, "/")
+		pkg = x[len(x)-1]
+	}
+
+	// set default target path as package path
+	if target == "" {
+		gopath := os.Getenv("GOPATH")
+		target = filepath.Join(gopath, "src", packageName)
+	}
+
 	_, err := bindata.Gen(bindata.GenOption{
-		Package:  packageName,
+		Package:  pkg,
 		Resource: resource,
 		Prefix:   prefix,
 		Target:   target,
