@@ -44,6 +44,10 @@ func main() {
 		target = filepath.Join(gopath, "src", packageName)
 	}
 
+	fmt.Printf("package=[%s]\nprefix=[%s]\ntarget=[%s]\nresource=[%s]\n",
+		packageName, prefix, target, resource)
+	fmt.Println("... ...")
+
 	_, err := bindata.Gen(bindata.GenOption{
 		Package:  pkg,
 		Resource: resource,
@@ -51,6 +55,12 @@ func main() {
 		Target:   target,
 	})
 	if err != nil {
-		fmt.Printf("err: %s", err)
+		fmt.Printf("err: %s\n", err)
+		return
 	}
+
+	info, _ := os.Stat(filepath.Join(target, "asset.go"))
+
+	fmt.Printf("done, size=%dK\n", info.Size()/1024)
+
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type GenOption struct {
@@ -15,6 +16,9 @@ type GenOption struct {
 	Prefix   string // file prefix
 	Target   string // where to put the generated file
 	Resource string // a single file or a dir
+
+	AssetName   string // default=asset.go
+	BindataName string // default=bindata.go
 }
 
 func walk(root string) (fs []*file, err error) {
@@ -117,7 +121,11 @@ func Gen(opts GenOption) (Assets, error) {
 		return nil, fmt.Errorf("target is not a directory")
 	}
 
-	targetPkg := filepath.Join(opts.Target, "asset.go")
+	if opts.AssetName == "" {
+		opts.AssetName = "asset.go"
+	}
+
+	targetPkg := filepath.Join(opts.Target, opts.AssetName)
 	f, err := os.Create(targetPkg)
 	if err != nil {
 		return nil, err
@@ -128,7 +136,11 @@ func Gen(opts GenOption) (Assets, error) {
 		return nil, err
 	}
 
-	targetBin := filepath.Join(opts.Target, "bindata.go")
+	if opts.BindataName == "" {
+		opts.BindataName = "bindata.go"
+	}
+
+	targetBin := filepath.Join(opts.Target, opts.BindataName)
 	fBindata, err := os.Create(targetBin)
 	if err != nil {
 		return nil, err
@@ -180,7 +192,8 @@ func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
 	for _, f := range d.all.files {
 		filesStr = fmt.Sprintf("%s\n\t%s", filesStr, f.path)
 	}
-	fmt.Fprintf(w, headerTemplate, filesStr, pName)
+	fmt.Fprintf(w, headerTemplate,
+		time.Now().Format(time.RFC3339), filesStr, pName)
 
 	// files
 	for _, f := range d.all.files {
