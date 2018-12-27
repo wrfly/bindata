@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 )
@@ -24,6 +25,8 @@ type Asset interface {
 	List() ([]Asset, error)
 	Readdir(count int) ([]os.FileInfo, error)
 	File() (http.File, error)
+	Bytes() []byte // return file bytes
+	Name() string  // return file serve name
 }
 
 var (
@@ -58,20 +61,20 @@ func (d *data) List() []Asset {
 
 func (d *data) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if f, found := d.files[r.RequestURI]; found {
-
-		if f.isDir {
+		index, indexFound := d.files[filepath.Join(r.RequestURI, "index.html")]
+		if indexFound {
+			f = index
+		} else if f.isDir {
 			dirList(w, r, &fileReader{f, 0})
 			return
 		}
-
-		w.Write(f.b)
 		w.Header().Set("Content-Length", fmt.Sprint(f.size))
 		w.Header().Set("Content-Type", f.cType)
 		w.Header().Set("Date", fmt.Sprint(f.mTime))
-		return
+		w.Write(f.b)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
 	}
-	w.WriteHeader(http.StatusNotFound)
-	return
 }
 
 type fileReader struct {
@@ -142,6 +145,14 @@ func (f *file) Stat() (os.FileInfo, error) {
 
 func (f *file) File() (http.File, error) {
 	return &fileReader{f, 0}, nil
+}
+
+func (f *file) Bytes() []byte {
+	return f.b
+}
+
+func (f *file) Name() string {
+	return f.sPath
 }
 
 func (f *file) List() ([]Asset, error) {
@@ -223,7 +234,7 @@ func dirList(w http.ResponseWriter, r *http.Request, f http.File) {
 		// name may contain '?' or '#', which must be escaped to remain
 		// part of the URL path, and not indicate the start of a query
 		// string or fragment.
-		url := url.URL{Path: name}
+		url := url.URL{Path: filepath.Join(r.RequestURI, name)}
 		fmt.Fprintf(w, "<a href=\"%%s\">%%s</a>\n", url.String(), d.Name())
 	}
 	fmt.Fprintf(w, "</pre>\n")

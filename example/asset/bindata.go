@@ -22,6 +22,8 @@ type Asset interface {
 	List() ([]Asset, error)
 	Readdir(count int) ([]os.FileInfo, error)
 	File() (http.File, error)
+	Bytes() []byte // return file bytes
+	Name() string  // return file serve name
 }
 
 var (
@@ -140,6 +142,14 @@ func (f *file) Stat() (os.FileInfo, error) {
 
 func (f *file) File() (http.File, error) {
 	return &fileReader{f, 0}, nil
+}
+
+func (f *file) Bytes() []byte {
+	return f.b
+}
+
+func (f *file) Name() string {
+	return f.sPath
 }
 
 func (f *file) List() ([]Asset, error) {
