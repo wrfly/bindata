@@ -17,3 +17,6 @@ template t:
 
 build b:
 	go build .
+
+.DEFAULT_GOAL := all
+all: t b
