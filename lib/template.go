@@ -8,6 +8,7 @@ var %s = &file{
 		size:  %d,
 		mode:  os.FileMode(%d),
 		mTime: time.Unix(%d, 0),
+		cType:  "%s",
 	},
 	path:  "%s",
 	dirP:  "%s",

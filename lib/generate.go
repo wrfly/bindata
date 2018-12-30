@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,6 +37,7 @@ func walk(root string) (fs []*file, err error) {
 					size:  info.Size(),
 					mode:  info.Mode(),
 					mTime: info.ModTime(),
+					cType: mime.TypeByExtension(filepath.Ext(path)),
 				},
 				path: xPath,
 				dirP: filepath.Dir(xPath),
@@ -238,6 +240,7 @@ func printFile(w io.Writer, name string, f *file) error {
 		f.size,
 		f.mode,
 		f.mTime.Unix(),
+		f.cType,
 		f.path,
 		f.dirP,
 		f.sPath,
