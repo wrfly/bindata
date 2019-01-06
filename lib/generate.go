@@ -2,6 +2,7 @@ package bindata
 
 import (
 	"bytes"
+	"compress/zlib"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -222,10 +223,11 @@ func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
 }
 
 func printFile(w io.Writer, name string, f *file) error {
+	compressedBytes := compress(f.b)
 	// print bytes
 	bs := ""
-	for i, b := range f.b {
-		if i%15 == 0 && len(f.b) > 15 {
+	for i, b := range compressedBytes {
+		if i%15 == 0 && len(compressedBytes) > 15 {
 			bs += "\" +\n\t\""
 		}
 		bs += fmt.Sprintf("\\x%02x", b)
@@ -249,4 +251,12 @@ func printFile(w io.Writer, name string, f *file) error {
 	)
 
 	return nil
+}
+
+func compress(in []byte) []byte {
+	w := bytes.NewBuffer(nil)
+	zw := zlib.NewWriter(w)
+	zw.Write(in)
+	zw.Flush()
+	return w.Bytes()
 }

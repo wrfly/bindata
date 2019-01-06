@@ -1,12 +1,16 @@
 package asset
 
 import (
+	"bytes"
+	"compress/zlib"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 )
@@ -58,20 +62,20 @@ func (d *data) List() []Asset {
 
 func (d *data) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if f, found := d.files[r.RequestURI]; found {
-
-		if f.isDir {
+		index, indexFound := d.files[filepath.Join(r.RequestURI, "index.html")]
+		if indexFound {
+			f = index
+		} else if f.isDir {
 			dirList(w, r, &fileReader{f, 0})
 			return
 		}
-
-		w.Write(f.b)
 		w.Header().Set("Content-Length", fmt.Sprint(f.size))
 		w.Header().Set("Content-Type", f.cType)
 		w.Header().Set("Date", fmt.Sprint(f.mTime))
-		return
+		w.Write(f.b)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
 	}
-	w.WriteHeader(http.StatusNotFound)
-	return
 }
 
 type fileReader struct {
@@ -118,6 +122,7 @@ type file struct {
 	dirP   string // dir path
 	sPath  string // serve path
 	b      []byte // data
+	cb     []byte // data
 	infos  []os.FileInfo
 	files  []*file
 	assets []Asset
@@ -164,7 +169,7 @@ func (f *file) keyFileName() string {
 }
 
 func (f *file) keyBytesName() string {
-	return fmt.Sprintf("_bytes_%d", f.id)
+	return fmt.Sprintf("_compress_bytes_%d", f.id)
 }
 
 func (f *file) keyMTime() string {
@@ -231,8 +236,16 @@ func dirList(w http.ResponseWriter, r *http.Request, f http.File) {
 		// name may contain '?' or '#', which must be escaped to remain
 		// part of the URL path, and not indicate the start of a query
 		// string or fragment.
-		url := url.URL{Path: name}
+		url := url.URL{Path: filepath.Join(r.RequestURI, name)}
 		fmt.Fprintf(w, "<a href=\"%s\">%s</a>\n", url.String(), d.Name())
 	}
 	fmt.Fprintf(w, "</pre>\n")
+}
+
+func unCompress(in []byte) []byte {
+	r := bytes.NewBuffer(in)
+	zr, _ := zlib.NewReader(r)
+	defer zr.Close()
+	bs, _ := ioutil.ReadAll(zr)
+	return bs
 }

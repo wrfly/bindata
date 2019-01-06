@@ -8,13 +8,13 @@ var %s = &file{
 		size:  %d,
 		mode:  os.FileMode(%d),
 		mTime: time.Unix(%d, 0),
-		cType:  "%s",
+		cType: "%s",
 	},
 	path:  "%s",
 	dirP:  "%s",
 	sPath: "%s",
 	id:    %d,
-	b:     %s,
+	cb:    %s,
 }
 `
 
@@ -52,6 +52,7 @@ var d = &data{
 
 func init() {
 	for _, f := range fs {
+		f.b = unCompress(f.cb)
 		if !f.isDir || len(f.files) != 0 {
 			continue
 		}

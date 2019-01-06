@@ -3,9 +3,12 @@ package bindata
 var bindataTemplate = `package %s
 
 import (
+	"bytes"
+	"compress/zlib"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -121,6 +124,7 @@ type file struct {
 	dirP   string // dir path
 	sPath  string // serve path
 	b      []byte // data
+	cb     []byte // data
 	infos  []os.FileInfo
 	files  []*file
 	assets []Asset
@@ -167,7 +171,7 @@ func (f *file) keyFileName() string {
 }
 
 func (f *file) keyBytesName() string {
-	return fmt.Sprintf("_bytes_%%d", f.id)
+	return fmt.Sprintf("_compress_bytes_%%d", f.id)
 }
 
 func (f *file) keyMTime() string {
@@ -238,5 +242,13 @@ func dirList(w http.ResponseWriter, r *http.Request, f http.File) {
 		fmt.Fprintf(w, "<a href=\"%%s\">%%s</a>\n", url.String(), d.Name())
 	}
 	fmt.Fprintf(w, "</pre>\n")
+}
+
+func unCompress(in []byte) []byte {
+	r := bytes.NewBuffer(in)
+	zr, _ := zlib.NewReader(r)
+	defer zr.Close()
+	bs, _ := ioutil.ReadAll(zr)
+	return bs
 }
 `
