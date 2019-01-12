@@ -77,7 +77,7 @@ func fill(fs []*file) {
 			if ff.dirP == f.path {
 				f.infos = append(f.infos, ff.fileInfo)
 				f.files = append(f.files, ff)
-				f.assets = append(f.assets, ff)
+				f.assets = append(f.assets, &fileReader{ff, 0})
 			}
 		}
 	}
@@ -177,7 +177,7 @@ func buildData(resource, prefix string) (*data, error) {
 		}
 		all.files = append(all.files, f)
 		all.infos = append(all.infos, f.fileInfo)
-		all.assets = append(all.assets, f)
+		all.assets = append(all.assets, &fileReader{f, 0})
 	}
 
 	return &data{

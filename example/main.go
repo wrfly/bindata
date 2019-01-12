@@ -25,15 +25,17 @@ func main() {
 	// list files
 	assets := embeddedData.List()
 	for _, file := range assets {
-		info, _ := file.File()
-		stat, _ := info.Stat()
+		stat, _ := file.Stat()
 		fmt.Printf("contains file: %s [%d]\n",
 			stat.Name(), stat.Size())
 	}
 
 	// open one file
 	n := "/sub/sub_main.css"
-	f, _ := embeddedData.Open(n)
+	f, err := embeddedData.Asset(n)
+	if err != nil {
+		panic(err)
+	}
 	bs, _ := ioutil.ReadAll(f)
 	fmt.Printf("file %s's data: %s\n", n, bs)
 

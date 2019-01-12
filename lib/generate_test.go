@@ -6,22 +6,17 @@ import (
 
 func TestGenerate(t *testing.T) {
 	fs, err := Gen(GenOption{
-		Package:  "main",
-		Resource: "resource",
+		Package:  "asset",
+		Resource: "../resource",
 		Prefix:   "/html",
-		Target:   "example",
+		Target:   "../example/asset",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, f := range fs.List() {
-		info, err := f.File()
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		stat, err := info.Stat()
+		stat, err := f.Stat()
 		if err != nil {
 			t.Error(err)
 			continue

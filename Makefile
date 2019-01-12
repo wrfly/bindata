@@ -9,6 +9,9 @@ var bindataTemplate = `
 endef
 export Bindata_Template_HEAD
 
+test:
+	go test -v --cover ./lib
+
 template t:
 	printf "$$Bindata_Template_HEAD" > $(FILE)
 	sed "s/%/%%/g;s/package bindata/package %s/" \
@@ -18,5 +21,10 @@ template t:
 build b:
 	go build .
 
+
+e:
+	go build -o /tmp/example github.com/wrfly/bindata/example
+	/tmp/example
+
 .DEFAULT_GOAL := all
-all: t b
+all: test t b e

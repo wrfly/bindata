@@ -18,16 +18,14 @@ import (
 type Assets interface {
 	List() []Asset // return all files
 	Asset(name string) (Asset, error)
-	Open(name string) (http.File, error)              // implement http.FileSystem
 	ServeHTTP(w http.ResponseWriter, r *http.Request) // implement http.FileServer
 }
 
 type Asset interface {
 	List() ([]Asset, error)
-	Readdir(count int) ([]os.FileInfo, error)
-	File() (http.File, error)
 	Bytes() []byte // return file bytes
 	Name() string  // return file serve name
+	http.File      // implement http.FileSystem
 }
 
 var (
@@ -42,16 +40,9 @@ type data struct {
 	all    *file
 }
 
-func (d *data) Open(name string) (http.File, error) {
-	if f, found := d.files[name]; found {
-		return &fileReader{f, 0}, nil
-	}
-	return nil, os.ErrNotExist
-}
-
 func (d *data) Asset(name string) (Asset, error) {
 	if f, found := d.files[name]; found {
-		return f, nil
+		return &fileReader{f, 0}, nil
 	}
 	return nil, os.ErrNotExist
 }
@@ -183,7 +174,6 @@ type fileInfo struct {
 	mode  os.FileMode
 	mTime time.Time
 	cType string
-	// cTime time.Time
 }
 
 // base name of the file
