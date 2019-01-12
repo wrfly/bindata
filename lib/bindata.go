@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -26,6 +27,7 @@ type Asset interface {
 	Bytes() []byte // return file bytes
 	Name() string  // return file serve name
 	http.File      // implement http.FileSystem
+	Template() *template.Template
 }
 
 var (
@@ -153,6 +155,14 @@ func (f *file) List() ([]Asset, error) {
 		return f.assets, nil
 	}
 	return nil, errNotDir
+}
+
+func (f *file) Template() *template.Template {
+	t, err := template.New(f.name).Parse(string(f.b))
+	if err != nil {
+		panic(err)
+	}
+	return t
 }
 
 func (f *file) keyFileName() string {

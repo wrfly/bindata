@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -38,6 +39,13 @@ func main() {
 	}
 	bs, _ := ioutil.ReadAll(f)
 	fmt.Printf("file %s's data: %s\n", n, bs)
+
+	t := f.Template()
+	w := bytes.NewBuffer(nil)
+	t.Execute(w, map[string]interface{}{
+		"hey": "girl",
+	})
+	fmt.Printf("template: %s", w)
 
 	// serve http
 	http.Handle("/", embeddedData)
