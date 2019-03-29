@@ -21,10 +21,8 @@ func init() {
 }
 
 func main() {
-	embeddedData := asset.Data
-
 	// list files
-	assets := embeddedData.List()
+	assets := asset.List()
 	for _, file := range assets {
 		stat, _ := file.Stat()
 		fmt.Printf("contains file: %s [%d]\n",
@@ -33,7 +31,7 @@ func main() {
 
 	// open one file
 	n := "/sub/sub_main.css"
-	f, err := embeddedData.Asset(n)
+	f, err := asset.Find(n)
 	if err != nil {
 		panic(err)
 	}
@@ -48,7 +46,7 @@ func main() {
 	fmt.Printf("template: %s", w)
 
 	// serve http
-	http.Handle("/", embeddedData)
-	http.Handle("/html", embeddedData)
+	http.HandleFunc("/", asset.Handler)
+	http.HandleFunc("/html", asset.Handler)
 	http.ListenAndServe(listen, nil)
 }

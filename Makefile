@@ -21,7 +21,6 @@ template t:
 build b:
 	go build .
 
-
 e:
 	go build -o /tmp/example github.com/wrfly/bindata/example
 	/tmp/example

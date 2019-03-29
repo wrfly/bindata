@@ -62,7 +62,7 @@ import (
 )
 
 func main() {
-    http.Handle("/", asset.Data)
+    http.HandleFunc("/", asset.Handler)
     http.ListenAndServe(":8080", nil)
 }
 ```

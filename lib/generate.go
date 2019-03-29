@@ -211,7 +211,7 @@ func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
 	fs := ""
 	for i, n := range names {
 		if i%5 == 0 {
-			fs += "\n\t"
+			fs += "\n\t\t"
 		} else {
 			fs += " "
 		}
