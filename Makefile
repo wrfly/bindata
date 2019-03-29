@@ -22,8 +22,9 @@ build b:
 	go build .
 
 e:
+	./bindata --resource ./resource
 	go build -o /tmp/example github.com/wrfly/bindata/example
-	/tmp/example
+	# /tmp/example
 
 .DEFAULT_GOAL := all
 all: test t b e

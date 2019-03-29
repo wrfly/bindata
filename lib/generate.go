@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -25,40 +26,40 @@ type GenOption struct {
 
 func walk(root string) (fs []*file, err error) {
 	id := 0
-	if err := filepath.Walk(root,
-		func(path string, info os.FileInfo, err error) error {
-			if info == nil {
-				return fmt.Errorf("get file [%s] error, info is nil", path)
-			}
-			xPath := filepath.Join("/", strings.TrimPrefix(path, root))
-			got := &file{
-				fileInfo: &fileInfo{
-					name:  info.Name(),
-					isDir: info.IsDir(),
-					size:  info.Size(),
-					mode:  info.Mode(),
-					mTime: info.ModTime(),
-					cType: mime.TypeByExtension(filepath.Ext(path)),
-				},
-				path: xPath,
-				dirP: filepath.Dir(xPath),
-				id:   id,
-			}
-			id++
+	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if info == nil {
+			return fmt.Errorf("get file [%s] error, info is nil", path)
+		}
+		xPath := filepath.Join("/", strings.TrimPrefix(path, root))
+		got := &file{
+			fileInfo: &fileInfo{
+				name:  info.Name(),
+				isDir: info.IsDir(),
+				size:  info.Size(),
+				mode:  info.Mode(),
+				mTime: info.ModTime(),
+				cType: mime.TypeByExtension(filepath.Ext(path)),
+			},
+			path: xPath,
+			dirP: filepath.Dir(xPath),
+			id:   id,
+		}
+		id++
 
-			if xPath == "/" {
-				got.name = "/"
-			}
+		if xPath == "/" {
+			got.name = "/"
+		}
 
-			if !info.IsDir() {
-				got.b, err = ioutil.ReadFile(path)
-				if err != nil {
-					return err
-				}
+		if !info.IsDir() {
+			got.b, err = ioutil.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("read file %s error: %s", path, err)
 			}
-			fs = append(fs, got)
-			return nil
-		}); err != nil {
+		}
+		fs = append(fs, got)
+
+		return nil
+	}); err != nil {
 		return fs, err
 	}
 	fill(fs)
@@ -195,13 +196,24 @@ func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
 	for _, f := range d.all.files {
 		filesStr = fmt.Sprintf("%s\n\t%s", filesStr, f.path)
 	}
-	fmt.Fprintf(w, headerTemplate,
-		time.Now().Format(time.RFC3339), filesStr, pName)
+	w.WriteString(fmt.Sprintf(headerTemplate, time.Now().Format(time.RFC3339), filesStr, pName))
 
 	// files
+	var (
+		wg sync.WaitGroup
+		m  sync.Mutex
+	)
+	wg.Add(len(d.all.files))
 	for _, f := range d.all.files {
-		printFile(w, f.sPath, f)
+		go func(f *file) {
+			content := printFile(f.sPath, f)
+			m.Lock()
+			w.WriteString(content)
+			m.Unlock()
+			wg.Done()
+		}(f)
 	}
+	wg.Wait()
 
 	// package footer
 	names := []string{}
@@ -217,25 +229,28 @@ func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
 		}
 		fs += n + ","
 	}
-	fmt.Fprintf(w, footerTemplate, fs, prefix)
+	w.WriteString(fmt.Sprintf(footerTemplate, fs, prefix))
 
 	return w, nil
 }
 
-func printFile(w io.Writer, name string, f *file) error {
+func printFile(name string, f *file) string {
 	compressedBytes := compress(f.b)
 	// print bytes
-	bs := ""
+	bsW := bytes.NewBuffer(make([]byte, 0, 1e3))
 	for i, b := range compressedBytes {
 		if i%15 == 0 && len(compressedBytes) > 15 {
-			bs += "\" +\n\t\""
+			bsW.WriteString(fmt.Sprintf("\" +\n\t\""))
 		}
-		bs += fmt.Sprintf("\\x%02x", b)
+		bsW.WriteString(fmt.Sprintf("\\x%02x", b))
 	}
-	fmt.Fprintf(w, fileBytesTemplate, f.keyBytesName(), bs)
+
+	contentW := bytes.NewBuffer(make([]byte, 0, bsW.Len()))
+
+	contentW.WriteString(fmt.Sprintf(fileBytesTemplate, f.keyBytesName(), bsW))
 
 	// print file
-	fmt.Fprintf(w, fileTemplate,
+	contentW.WriteString(fmt.Sprintf(fileTemplate,
 		f.keyFileName(),
 		f.name,
 		f.isDir,
@@ -248,15 +263,15 @@ func printFile(w io.Writer, name string, f *file) error {
 		f.sPath,
 		f.id,
 		f.keyBytesName(),
-	)
+	))
 
-	return nil
+	return contentW.String()
 }
 
 func compress(in []byte) []byte {
 	w := bytes.NewBuffer(nil)
 	zw := zlib.NewWriter(w)
 	zw.Write(in)
-	zw.Flush()
+	zw.Close()
 	return w.Bytes()
 }

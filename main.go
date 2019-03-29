@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	bindata "github.com/wrfly/bindata/lib"
 )
@@ -48,6 +49,7 @@ func main() {
 		packageName, prefix, target, resource)
 	fmt.Println("... ...")
 
+	start := time.Now()
 	_, err := bindata.Gen(bindata.GenOption{
 		Package:  pkg,
 		Resource: resource,
@@ -61,6 +63,7 @@ func main() {
 
 	info, _ := os.Stat(filepath.Join(target, "asset.go"))
 
-	fmt.Printf("done, size=%dK\n", info.Size()/1024)
+	fmt.Printf("done, size=%dK use=%s\n",
+		info.Size()/1024, time.Since(start))
 
 }
