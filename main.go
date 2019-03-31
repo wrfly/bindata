@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,9 +45,10 @@ func main() {
 		target = filepath.Join(gopath, "src", packageName)
 	}
 
-	fmt.Printf("package=[%s]\nprefix=[%s]\ntarget=[%s]\nresource=[%s]\n",
-		packageName, prefix, target, resource)
-	fmt.Println("... ...")
+	log.Printf("package: [%s]", packageName)
+	log.Printf("prefix: [%s]", prefix)
+	log.Printf("target: [%s]", target)
+	log.Printf("resource: [%s]", resource)
 
 	start := time.Now()
 	_, err := bindata.Gen(bindata.GenOption{
@@ -57,13 +58,17 @@ func main() {
 		Target:   target,
 	})
 	if err != nil {
-		fmt.Printf("err: %s\n", err)
+		log.Printf("err: %s\n", err)
 		return
 	}
 
-	info, _ := os.Stat(filepath.Join(target, "asset.go"))
+	info, err := os.Stat(filepath.Join(target, "asset.go"))
+	if err != nil {
+		log.Printf("err: %s\n", err)
+		return
+	}
 
-	fmt.Printf("done, size=%dK use=%s\n",
+	log.Printf("done; size=%dK, use=%s\n",
 		info.Size()/1024, time.Since(start))
 
 }

@@ -26,7 +26,7 @@ type GenOption struct {
 
 func walk(root string) (fs []*file, err error) {
 	id := 0
-	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return fmt.Errorf("get file [%s] error, info is nil", path)
 		}
@@ -59,12 +59,13 @@ func walk(root string) (fs []*file, err error) {
 		fs = append(fs, got)
 
 		return nil
-	}); err != nil {
-		return fs, err
+	})
+	if err != nil {
+		return
 	}
 	fill(fs)
 
-	return fs, nil
+	return
 }
 
 func fill(fs []*file) {
@@ -84,7 +85,7 @@ func fill(fs []*file) {
 	}
 }
 
-func Gen(opts GenOption) (Assets, error) {
+func Gen(opts GenOption) (*data, error) {
 	// validate options
 	if opts.Package == "" {
 		opts.Package = "asset"
@@ -150,7 +151,7 @@ func Gen(opts GenOption) (Assets, error) {
 		return nil, err
 	}
 	defer fBindata.Close()
-	_, err = fmt.Fprintf(fBindata, bindataTemplate, opts.Package)
+	_, err = fBindata.WriteString(fmt.Sprintf(bindataTemplate, opts.Package))
 
 	return d, err
 }
@@ -169,8 +170,10 @@ func buildData(resource, prefix string) (*data, error) {
 		return nil, err
 	}
 
+	var size int64
 	all := &file{fileInfo: &fileInfo{isDir: true}}
 	for _, f := range fs {
+		size += f.size
 		if f.path == "/" {
 			f.sPath = filepath.Join(prefix, f.dirP)
 		} else {
@@ -189,7 +192,7 @@ func buildData(resource, prefix string) (*data, error) {
 }
 
 func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
-	w := bytes.NewBuffer(nil)
+	w := new(bytes.Buffer)
 
 	// package header
 	filesStr := ""
@@ -269,9 +272,9 @@ func printFile(name string, f *file) string {
 }
 
 func compress(in []byte) []byte {
-	w := bytes.NewBuffer(nil)
-	zw := zlib.NewWriter(w)
-	zw.Write(in)
-	zw.Close()
-	return w.Bytes()
+	zipBuffer := bytes.NewBuffer(make([]byte, 0, 1e3))
+	zipWriter := zlib.NewWriter(zipBuffer)
+	zipWriter.Write(in)
+	zipWriter.Close()
+	return zipBuffer.Bytes()
 }
