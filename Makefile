@@ -22,7 +22,7 @@ build b:
 	go build .
 
 # generate
-g:
+g: b
 	./bindata --resource ./resource
 
 # example

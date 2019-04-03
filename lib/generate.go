@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -202,21 +201,10 @@ func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
 	w.WriteString(fmt.Sprintf(headerTemplate, time.Now().Format(time.RFC3339), filesStr, pName))
 
 	// files
-	var (
-		wg sync.WaitGroup
-		m  sync.Mutex
-	)
-	wg.Add(len(d.all.files))
 	for _, f := range d.all.files {
-		go func(f *file) {
-			content := printFile(f.sPath, f)
-			m.Lock()
-			w.WriteString(content)
-			m.Unlock()
-			wg.Done()
-		}(f)
+		content := printFile(f.sPath, f)
+		w.WriteString(content)
 	}
-	wg.Wait()
 
 	// package footer
 	names := []string{}
@@ -237,20 +225,38 @@ func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
 	return w, nil
 }
 
+var standTemplate = "\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x\\x%02x"
+
 func printFile(name string, f *file) string {
-	compressedBytes := compress(f.b)
+	cbs := compress(f.b)
 	// print bytes
-	bsW := bytes.NewBuffer(make([]byte, 0, 1e3))
-	for i, b := range compressedBytes {
-		if i%15 == 0 && len(compressedBytes) > 15 {
-			bsW.WriteString(fmt.Sprintf("\" +\n\t\""))
+	left := len(cbs)
+	length := left
+	bs := make([]byte, 0, left*5)
+
+	for i := 0; i < length; {
+		if i%15 == 0 && length > 15 {
+			bs = append(bs, []byte(fmt.Sprintf("\" +\n\t\""))...)
 		}
-		bsW.WriteString(fmt.Sprintf("\\x%02x", b))
+		if left > 15 {
+			bs = append(bs, []byte(
+				fmt.Sprintf(standTemplate,
+					cbs[i], cbs[i+1], cbs[i+2], cbs[i+3], cbs[i+4],
+					cbs[i+5], cbs[i+6], cbs[i+7], cbs[i+8], cbs[i+9],
+					cbs[i+10], cbs[i+11], cbs[i+12], cbs[i+13], cbs[i+14],
+				))...)
+			left -= 15
+			i += 15
+		} else {
+			bs = append(bs, []byte(fmt.Sprintf("\\x%02x", cbs[i]))...)
+			left--
+			i++
+		}
 	}
 
-	contentW := bytes.NewBuffer(make([]byte, 0, bsW.Len()))
+	contentW := bytes.NewBuffer(make([]byte, 0, len(bs)))
 
-	contentW.WriteString(fmt.Sprintf(fileBytesTemplate, f.keyBytesName(), bsW))
+	contentW.WriteString(fmt.Sprintf(fileBytesTemplate, f.keyBytesName(), bs))
 
 	// print file
 	contentW.WriteString(fmt.Sprintf(fileTemplate,

@@ -50,6 +50,10 @@ func main() {
 	log.Printf("target: [%s]", target)
 	log.Printf("resource: [%s]", resource)
 
+	// pf, _ := os.Create("pprof.debug")
+	// defer pf.Close()
+	// pprof.StartCPUProfile(pf)
+
 	start := time.Now()
 	_, err := bindata.Gen(bindata.GenOption{
 		Package:  pkg,
@@ -61,6 +65,7 @@ func main() {
 		log.Printf("err: %s\n", err)
 		return
 	}
+	// pprof.StopCPUProfile()
 
 	info, err := os.Stat(filepath.Join(target, "asset.go"))
 	if err != nil {
