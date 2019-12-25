@@ -23,7 +23,7 @@ build b:
 
 # generate
 g: b
-	./bindata --resource ./resource
+	./bindata -src ./resource
 
 # example
 e: g
