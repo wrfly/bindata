@@ -22,14 +22,12 @@ go get github.com/wrfly/bindata
 
 ```txt
 Usage of ./bindata:
-  -pkg string
-        target package name (default "github.com/wrfly/bindata/example/asset")
-  -prefix string
-        resource prefix, used for http server (default "/")
-  -resource string
-        resource dir
-  -target string
-        where to put the generated files, default is the package's path
+ -dest        path to store go asset files, default is the pkg path
+ -pkg         package name [github.com/wrfly/bindata/example/asset]
+ -prefix      resource prefix, used for static files in HTTP server [/]
+ -src         resource dir
+ -with-mod    generate file with its mod info [false]
+ -with-time   generate file with its time info [false]
 ```
 
 ### Generate embedded data
@@ -40,7 +38,7 @@ located in `resource/` directory, then yoy can use the command below:
 
 ```bash
 bindata -pkg github.com/wrfly/bindata/example/asset \
-    -resource "resource/"
+    -src "resource/"
 ```
 
 After execute the command:

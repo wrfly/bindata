@@ -10,9 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
+// Option for generate asset files
 type Option struct {
 	Package  string // package name
 	Prefix   string // file prefix
@@ -26,39 +26,45 @@ type Option struct {
 	WithMod  bool
 }
 
-func walk(root string) (fs []*file, err error) {
+func walk(opt Option) (fs []*file, err error) {
+	root := opt.Resource
 	id := 0
 	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return fmt.Errorf("get file [%s] error, info is nil", path)
 		}
 		xPath := filepath.Join("/", strings.TrimPrefix(path, root))
-		got := &file{
+		f := &file{
 			fileInfo: &fileInfo{
 				name:  info.Name(),
 				isDir: info.IsDir(),
 				size:  info.Size(),
-				mode:  info.Mode(),
-				mTime: info.ModTime(),
 				cType: mime.TypeByExtension(filepath.Ext(path)),
 			},
+
 			path: xPath,
 			dirP: filepath.Dir(xPath),
 			id:   id,
 		}
+		if opt.WithMod {
+			f.fileInfo.mode = info.Mode()
+		}
+		if opt.WithTime {
+			f.fileInfo.mTime = info.ModTime()
+		}
 		id++
 
 		if xPath == "/" {
-			got.name = "/"
+			f.name = "/"
 		}
 
 		if !info.IsDir() {
-			got.b, err = ioutil.ReadFile(path)
+			f.b, err = ioutil.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("read file %s error: %s", path, err)
 			}
 		}
-		fs = append(fs, got)
+		fs = append(fs, f)
 
 		return nil
 	})
@@ -87,6 +93,7 @@ func fill(fs []*file) {
 	}
 }
 
+// Gen data
 func Gen(opts Option) (*data, error) {
 	// validate options
 	if opts.Package == "" {
@@ -104,7 +111,7 @@ func Gen(opts Option) (*data, error) {
 	}
 
 	// make data
-	d, err := buildData(opts.Resource, opts.Prefix)
+	d, err := buildData(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -158,16 +165,16 @@ func Gen(opts Option) (*data, error) {
 	return d, err
 }
 
-func buildData(resource, prefix string) (*data, error) {
-	if !filepath.IsAbs(resource) {
+func buildData(opt Option) (*data, error) {
+	if !filepath.IsAbs(opt.Resource) {
 		pwd, err := os.Getwd()
 		if err != nil {
 			return nil, err
 		}
-		resource = filepath.Join(pwd, resource)
+		opt.Resource = filepath.Join(pwd, opt.Resource)
 	}
 
-	fs, err := walk(resource)
+	fs, err := walk(opt)
 	if err != nil {
 		return nil, err
 	}
@@ -177,9 +184,9 @@ func buildData(resource, prefix string) (*data, error) {
 	for _, f := range fs {
 		size += f.size
 		if f.path == "/" {
-			f.sPath = filepath.Join(prefix, f.dirP)
+			f.sPath = filepath.Join(opt.Prefix, f.dirP)
 		} else {
-			f.sPath = filepath.Join(prefix, f.dirP, f.name)
+			f.sPath = filepath.Join(opt.Prefix, f.dirP, f.name)
 		}
 		all.files = append(all.files, f)
 		all.infos = append(all.infos, f.fileInfo)
@@ -187,7 +194,7 @@ func buildData(resource, prefix string) (*data, error) {
 	}
 
 	return &data{
-		prefix: prefix,
+		prefix: opt.Prefix,
 		files:  make(map[string]*file, len(fs)),
 		all:    all,
 	}, nil
@@ -201,7 +208,7 @@ func buildWriter(d *data, prefix, pName string) (io.WriterTo, error) {
 	for _, f := range d.all.files {
 		filesStr = fmt.Sprintf("%s\n\t%s", filesStr, f.path)
 	}
-	w.WriteString(fmt.Sprintf(headerTemplate, time.Now().Format(time.RFC3339), filesStr, pName))
+	w.WriteString(fmt.Sprintf(headerTemplate, filesStr, pName))
 
 	// files
 	for _, f := range d.all.files {
