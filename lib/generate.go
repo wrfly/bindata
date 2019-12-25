@@ -1,4 +1,4 @@
-package bindata
+package lib
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type GenOption struct {
+type Option struct {
 	Package  string // package name
 	Prefix   string // file prefix
 	Target   string // where to put the generated file
@@ -21,6 +21,9 @@ type GenOption struct {
 
 	AssetName   string // default=asset.go
 	BindataName string // default=bindata.go
+
+	WithTime bool
+	WithMod  bool
 }
 
 func walk(root string) (fs []*file, err error) {
@@ -84,7 +87,7 @@ func fill(fs []*file) {
 	}
 }
 
-func Gen(opts GenOption) (*data, error) {
+func Gen(opts Option) (*data, error) {
 	// validate options
 	if opts.Package == "" {
 		opts.Package = "asset"

@@ -3,7 +3,7 @@
 FILE = "lib/template_bindata.go"
 
 define Bindata_Template_HEAD
-package bindata
+package lib
 
 var bindataTemplate = `
 endef
@@ -14,7 +14,7 @@ test:
 
 template t:
 	printf "$$Bindata_Template_HEAD" > $(FILE)
-	sed "s/%/%%/g;s/package bindata/package %s/" \
+	sed "s/%/%%/g;s/package lib/package %s/" \
 		lib/bindata.go >> $(FILE)
 	printf "\`" >> $(FILE)
 

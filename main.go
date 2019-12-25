@@ -9,7 +9,7 @@ import (
 
 	"github.com/wrfly/gua"
 
-	bindata "github.com/wrfly/bindata/lib"
+	"github.com/wrfly/bindata/lib"
 )
 
 type config struct {
@@ -48,7 +48,7 @@ func main() {
 	log.Printf("dest:    [%s]", cfg.Dest)
 
 	start := time.Now()
-	_, err := bindata.Gen(bindata.GenOption{
+	_, err := lib.Gen(lib.Option{
 		Package:  pkg,
 		Resource: cfg.Source,
 		Prefix:   cfg.Prefix,

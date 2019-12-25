@@ -1,4 +1,4 @@
-package bindata
+package lib
 
 import (
 	"bytes"

@@ -1,11 +1,11 @@
-package bindata
+package lib
 
 import (
 	"testing"
 )
 
 func TestGenerate(t *testing.T) {
-	fs, err := Gen(GenOption{
+	fs, err := Gen(Option{
 		Package:  "asset",
 		Resource: "../resource",
 		Prefix:   "/html",
