@@ -246,7 +246,7 @@ func printFile(name string, f *file) string {
 
 	for i := 0; i < length; {
 		if i%15 == 0 && length > 15 {
-			bs = append(bs, []byte(fmt.Sprintf("\" +\n\t\""))...)
+			bs = append(bs, []byte("\" +\n\t\"")...)
 		}
 		if left > 15 {
 			bs = append(bs, []byte(

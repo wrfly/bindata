@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -157,11 +158,26 @@ func (f *file) List() ([]Asset, error) {
 	return nil, errNotDir
 }
 
+var (
+	templateCache = make(map[int]*template.Template)
+	templateM     sync.RWMutex
+)
+
 func (f *file) Template() *template.Template {
+	templateM.RLock()
+	t, ok := templateCache[f.id]
+	templateM.RUnlock()
+	if ok {
+		return t
+	}
+
 	t, err := template.New(f.name).Parse(string(f.b))
 	if err != nil {
 		panic(err)
 	}
+	templateM.Lock()
+	templateCache[f.id] = t
+	templateM.Unlock()
 	return t
 }
 
@@ -171,10 +187,6 @@ func (f *file) keyFileName() string {
 
 func (f *file) keyBytesName() string {
 	return fmt.Sprintf("_compress_bytes_%d", f.id)
-}
-
-func (f *file) keyMTime() string {
-	return fmt.Sprintf("_mTime_%d", f.id)
 }
 
 type fileInfo struct {
